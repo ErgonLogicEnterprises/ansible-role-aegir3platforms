@@ -1,0 +1,30 @@
+#!/bin/bash
+# derived from https://github.com/PraxisLabs/praxis_aegirvps_ansible/blob/master/library/latest_versions
+# http://jpmens.net/2012/07/05/shell-scripts-as-ansible-modules/
+# test rsstail below
+# bash library/latest_versions https://github.com/PraxisLabs/getopenoutreach_makefiles/releases.atom
+# https://github.com/pmarkham/writing-ansible-modules-in-bash/blob/master/ansible_bash_modules.md
+
+source $1
+
+LATEST_VERSION=`rsstail -N -1 -n1 -u $platform_feed | sed 's/.* //g'`
+
+cat <<EOF
+{
+  "ansible_facts" : {
+    "platform_release_number" : "$LATEST_VERSION"
+  }
+}
+EOF
+
+#feed=$1
+
+#LATEST_VERSION=`rsstail -N -1 -n1 -u $feed  | sed 's/.* //g'`
+
+#cat <<EOF
+#  {
+#    "ansible_facts" : {
+#     "platform_release_number" : "$LATEST_VERSION"
+#    }
+#  }
+#EOF
