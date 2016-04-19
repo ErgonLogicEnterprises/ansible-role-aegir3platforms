@@ -1,0 +1,84 @@
+---
+# https://github.com/PraxisLabs/praxis_aegirvps_ansible/blob/master/roles/auto-deploy/tasks/main.yml
+# tasks file for ansible-role-aegir3-drupal-install
+- name: Install required packages
+#  become: yes
+  apt: pkg={{item}} state=installed update_cache=false
+  with_items:
+    - rsstail
+
+- name: gather facts (versions)
+  become: yes
+  action: latest_versions platform_feed="{{ release_feed }}"
+  always_run: True
+
+- debug: msg="Platform {{ platform_name }}. Feed {{ release_feed }}. Version {{ platform_release_number }}."
+
+  # TODO change the logic, failing to succeed is bad ux, might send user on wild goose chase looking for errors that dont exist
+- name: Check if latest platform is deployed
+  become: yes
+  become_user: aegir
+  shell: "[ -d /var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }} ]"
+  ignore_errors: True
+  changed_when: False
+  always_run: True
+  register: platform_exists
+
+- name: Clone latest makefiles
+  become: yes
+  become_user: aegir
+  #shell: git clone {{ makefiles_repo }} dest=/var/aegir/makefiles/{{ platform_name }}_makefiles version="{{ platform_release_number }}"
+  git: repo={{ makefiles_repo }} dest=/var/aegir/makefiles/{{ platform_name }}_makefiles version="{{ platform_release_number }}"
+  when: platform_exists|failed
+
+# - name: Switch to aegir via bash
+#  become: yes
+#  become_user: aegir
+#  shell: sudo su - aegir -s /bin/bash drush status
+  # when: platform_exists|failed
+
+- name: Switch to aegir and run drush status via become_user
+  become: yes
+  become_user: aegir
+  shell: drush status
+
+#- name: Switch to aegir and run drush status via become_user
+#  become: yes
+#  become_user: aegir
+#  shell: drush dl drupal-7.x -d --destination="/var/aegir/platforms/drulenium-baseline" -y
+
+# This creates the makefiles with root ownership. That might be a good thing?
+# TODO: Should we use force?
+- name: Clone latest makefiles
+  become: yes
+  become_user: aegir
+  git: repo={{ makefiles_repo }} dest=/var/aegir/makefiles/{{ platform_name }}_makefiles-{{ platform_release_number }}
+  when: platform_exists|failed
+
+- name: Create latest platform
+  become: yes
+  become_user: aegir
+  shell: drush make /var/aegir/makefiles/{{ platform_name }}_makefiles/{{ makefile_name }} /var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }}
+#  shell: sudo -u aegir drush make /var/aegir/makefiles/{{ platform_name }}_makefiles/{{ makefile_name }} /var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }}
+  when: platform_exists|failed
+
+- name: provision-save the platform
+  become: yes
+  become_user: aegir
+  shell: drush --root=/var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }} provision-save @platform_{{ platform_name }}-{{ platform_release_number }} --context_type=platform --makefile={{ makefile_name }}
+#  shell: sudo -u aegir drush --root=/var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }} provision-save @platform_{{ platform_name }}-{{ platform_release_number }} --context_type=platform --makefile={{ makefile_name }}
+  when: platform_exists|failed
+
+- name: Import the platform into hostmaster
+  become: yes
+  become_user: aegir
+  shell: drush @hostmaster hosting-import @platform_{{ platform_name }}-{{ platform_release_number }}
+#  shell: sudo -u aegir drush @hostmaster hosting-import @platform_{{ platform_name }}-{{ platform_release_number }}
+  when: platform_exists|failed
+
+
+- name: drush @hostmaster hosting-tasks --debug
+  become: yes
+  become_user: aegir
+  shell: drush @hostmaster hosting-tasks --debug
+#  shell: sudo -u aegir drush @hostmaster hosting-import @platform_{{ platform_name }}-{{ platform_release_number }}

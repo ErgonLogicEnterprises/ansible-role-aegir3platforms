@@ -1,0 +1,6 @@
+---
+# defaults file for ansible-role-aegir3-drupal-install
+platform_name:
+platform_release_number:
+makefile_name:
+become: yes
