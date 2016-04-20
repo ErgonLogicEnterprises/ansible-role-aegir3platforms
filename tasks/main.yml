@@ -56,9 +56,9 @@
   when: platform_exists|failed
 
 - name: Create latest platform
-  become: yes
-  become_user: aegir
-  shell: drush make /var/aegir/makefiles/{{ platform_name }}_makefiles/{{ makefile_name }} /var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }}
+#  become: yes
+#  become_user: aegir
+  shell: sudo -u aegir drush make /var/aegir/makefiles/{{ platform_name }}_makefiles/{{ makefile_name }} /var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }}
 #  shell: sudo -u aegir drush make /var/aegir/makefiles/{{ platform_name }}_makefiles/{{ makefile_name }} /var/aegir/platforms/{{ platform_name }}-{{ platform_release_number }}
   when: platform_exists|failed
 
